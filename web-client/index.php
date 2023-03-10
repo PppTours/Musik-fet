@@ -1,3 +1,9 @@
+<?php
+
+const IS_ADMIN = true;
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,23 +12,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <link href="index.css" rel="stylesheet">
-    <script src="extensions-html.js"></script>
 </head>
 <body>
     <header>
         Musikfet
     </header>
-    <div id="content">
-        <div id="musics-list">
-        </div>
-        <div id="no-music-playing-info">
-            Aucune musique en cours :'(
-        </div>
-        <div id="add-music-box">
-            <span>Rajouter une musique :</span>
-            <input id="add-music-input" type="text" autocomplete="off">
-        </div>
-        <div id="music-propositions-list">
+    <div id="central-column">
+        <?php if(IS_ADMIN): ?>
+            <div id="yt-player"></div>
+            <script src="https://www.youtube.com/iframe_api"></script>
+        <?php endif; ?>
+        <div id="content">
+            <div id="musics-list">
+            </div>
+            <div id="no-music-playing-info">
+                Aucune musique en cours :'(
+            </div>
+            <div id="add-music-box">
+                <span>Rajouter une musique :</span>
+                <input id="add-music-input" type="text" autocomplete="off">
+            </div>
+            <div id="music-propositions-list">
+            </div>
         </div>
     </div>
     
@@ -158,6 +169,33 @@ window.addEventListener('load', () => {
 });
 
 </script>
+<?php if(IS_ADMIN): ?>
+<script>
+
+function onYouTubeIframeAPIReady() {
+
+    function onPlayerReady(event) {
+        event.target.playVideo();
+    }
+
+    function onPlayerStateChange(event) {
+        if(event.data == YT.PlayerState.ENDED) {
+            // reloadPlayingMusics();
+        }
+    }
+    const player = new YT.Player('yt-player', {
+        height: '390',
+        width: '640',
+        videoId: 'M7lc1UVf-VE',
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        },
+    });
+}
+
+</script>
+<?php endif; ?>
 <style>
 
 body {
@@ -207,7 +245,9 @@ input[type="text"]:focus {
 }
 
 #content {
-    margin: 1rem;
+    max-width: 500px;
+    margin: auto;
+    padding: 1rem;
 }
 
 #musics-list {
