@@ -1,6 +1,6 @@
 <?php
 
-const IS_ADMIN = true;
+const IS_HOST = true;
 
 ?>
 
@@ -16,24 +16,28 @@ const IS_ADMIN = true;
 <body>
     <header>
         Musikfet
-    </header>
-    <div id="central-column">
-        <?php if(IS_ADMIN): ?>
-            <div id="yt-player"></div>
-            <script src="https://www.youtube.com/iframe_api"></script>
+        <?php if(IS_HOST): ?>
+        <br>- Host -
         <?php endif; ?>
-        <div id="content">
-            <div id="musics-list">
-            </div>
-            <div id="no-music-playing-info">
-                Aucune musique en cours :'(
-            </div>
-            <div id="add-music-box">
-                <span>Rajouter une musique :</span>
-                <input id="add-music-input" type="text" autocomplete="off">
-            </div>
-            <div id="music-propositions-list">
-            </div>
+    </header>
+
+    <div id="content">
+        <?php if(IS_HOST): ?>
+        <div>
+            <button>Charger une playlist</button>
+            <button>Mettre en pause</button>
+        </div>
+        <?php endif; ?>
+        <div id="musics-list">
+        </div>
+        <div id="no-music-playing-info">
+            Aucune musique en cours :'(
+        </div>
+        <div id="add-music-box">
+            <span>Rajouter une musique :</span>
+            <input id="add-music-input" type="text" autocomplete="off">
+        </div>
+        <div id="music-propositions-list">
         </div>
     </div>
     
@@ -44,9 +48,15 @@ const IS_ADMIN = true;
                 <div class="music-bar-anim"></div>
                 <div class="music-bar-anim"></div>
             </span>
-            <!-- <svg class="t-playing-icon" xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 96 960 960"><path d="M160 896V576h140v320H160Zm250 0V256h140v640H410Zm250 0V456h140v440H660Z" fill="white"/></svg> -->
             <span class="t-delay">+3min</span>
             <a class="t-title" href="youtube.com" target="_blank">Title</a>
+            <span>
+                <?php if(IS_HOST): ?>
+                <span class="t-play-now-btn">&gt;</span>
+                &nbsp;
+                <span class="t-remove-btn">X</span>
+                <?php endif; ?>
+            </span>
         </div>
     </template>
     <template id="music-proposition-template">
@@ -73,7 +83,8 @@ function rebuildMusicsList(nextMusics) {
     musicsList.innerHTML = '';
     noMusicPlayingInfo.hidden = nextMusics.length != 0;
     let delay = 0;
-    for(let music of nextMusics) {
+    for(let i = 0; i < nextMusics.length; i++) {
+        const music = nextMusics[i];
         const musicElement = document.importNode(musicTemplate.content, true).firstElementChild;
         if(delay != 0) {
             musicElement.querySelector(".t-delay").textContent = `+${Math.ceil(delay/60)}min`;
@@ -83,6 +94,11 @@ function rebuildMusicsList(nextMusics) {
         }
         musicElement.querySelector(".t-title").textContent = music.title;
         musicElement.querySelector(".t-title").href = music.url;
+        musicElement.querySelector(".t-remove-btn")?.addEventListener("click", () => sendRemoveMusic(music));
+        if(i != 0)
+            musicElement.querySelector(".t-play-now-btn")?.addEventListener("click", () => sendPlayNowMusic(music));
+        else
+            musicElement.querySelector(".t-play-now-btn")?.remove();
         musicsList.append(...musicElement.childNodes);
         delay += music.duration;
     }
@@ -98,9 +114,9 @@ function rebuildMusicPropositions(propositions) {
     }
 }
 
-function reloadPlayingMusics() {
+async function reloadPlayingMusics() {
     let oldMusisc = currentMusics;
-    currentMusics = fetchPlayingMusics();
+    currentMusics = await fetchPlayingMusics();
     if(oldMusisc.length != currentMusics.length) {
         rebuildMusicsList(currentMusics);
     } else for(let i = 0; i < oldMusisc.length; i++) {
@@ -111,7 +127,7 @@ function reloadPlayingMusics() {
     }
 }
 
-function fetchPlayingMusics() {
+async function fetchPlayingMusics() {
     // mockup
     // this is supposed to be replaced by a query to the server
     return [
@@ -121,9 +137,16 @@ function fetchPlayingMusics() {
         { title: 'foo', duration: 45, url: 'http://youtube.com' },
         { title: 'foo' + Math.random(), duration: 45, url: 'http://youtube.com' },
     ];
+
+    return await fetch("/get-playing-musics")
+        .then(response => response.json())
+        .catch(e => {
+            console.error(e);
+            return [];
+        });
 }
 
-function fetchMusicPropositions(query) {
+async function fetchMusicPropositions(query) {
     // mockup
     // this is supposed to be replaced by a query to the server
     return [
@@ -133,24 +156,66 @@ function fetchMusicPropositions(query) {
         { title: 'foo', duration: 45, url: 'http://youtube.com' },
         { title: 'foo' + Math.random(), duration: 45, url: 'http://youtube.com' },
     ];
+
+    return await fetch(`/get-music-propositions?query=${query}`)
+        .then(response => response.json())
+        .catch(e => {
+            console.error(e);
+            return [];
+        });
 }
 
-function sendAddMusic(music) {
+async function sendRequest(content) {
     // do not send a request if one is already pending
     // (prevent double click)
     if(isRequestPending) return;
     isRequestPending = true;
-    setTimeout(() => isRequestPending = false, 1000);
+    let timeout = setTimeout(() => isRequestPending = false, 1000);
 
     // send the actual request
     let success = true;
 
+    let response = await fetch('/music-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(content),
+    }).catch(() => success = false);
+
+    isResquestPending = false;
+    clearTimeout(timeout);
+
     if(success) {
         // reload playing musics after the modification
         reloadPlayingMusics();
+    }
+
+    return { success, response };
+}
+
+async function sendAddMusic(music) {
+    let { success, response } = await sendRequest({
+        action: 'add',
+        music: music,
+    });
+
+    if(success) {
         rebuildMusicPropositions([]);
         addMusicInput.value = '';
     }
+}
+
+async function sendRemoveMusic(music) {
+    let { success, response } = await sendRequest({
+        action: 'remove',
+        music: music,
+    });
+}
+
+async function sendPlayNowMusic(music) {
+    let { success, response } = await sendRequest({
+        action: 'play-now',
+        music: music,
+    });
 }
 
 window.addEventListener('load', () => {
@@ -162,40 +227,13 @@ window.addEventListener('load', () => {
     let timeout = null;
     addMusicInput.addEventListener('input', () => {
         clearTimeout(timeout);
-        timeout = setTimeout(() => {
-            rebuildMusicPropositions(fetchMusicPropositions(addMusicInput.value));
+        timeout = setTimeout(async () => {
+            rebuildMusicPropositions(await fetchMusicPropositions(addMusicInput.value));
         }, 500);
     });
 });
 
 </script>
-<?php if(IS_ADMIN): ?>
-<script>
-
-function onYouTubeIframeAPIReady() {
-
-    function onPlayerReady(event) {
-        event.target.playVideo();
-    }
-
-    function onPlayerStateChange(event) {
-        if(event.data == YT.PlayerState.ENDED) {
-            // reloadPlayingMusics();
-        }
-    }
-    const player = new YT.Player('yt-player', {
-        height: '390',
-        width: '640',
-        videoId: 'M7lc1UVf-VE',
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-        },
-    });
-}
-
-</script>
-<?php endif; ?>
 <style>
 
 body {
@@ -244,6 +282,13 @@ input[type="text"]:focus {
     outline: none;
 }
 
+#yt-player-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
 #content {
     max-width: 500px;
     margin: auto;
@@ -252,6 +297,7 @@ input[type="text"]:focus {
 
 #musics-list {
     transition: height 0.5s;
+    user-select: none;
 }
 
 #no-music-playing-info {
@@ -269,17 +315,32 @@ input[type="text"]:focus {
 #musics-list,
 #music-propositions-list {
     display: grid;
-    grid-template-columns: 1fr 3fr;
+    grid-template-columns: 1fr 3fr 1fr;
     row-gap: 10px;
 }
 
-#musics-list > :nth-child(2n+1) {
+#musics-list > :nth-child(3n+1) {
     color: #dadada;
     font-weight: bolder;
     width: 50px;
 }
 
-#musics-list > :nth-child(2n),
+#musics-list > :nth-child(3n) {
+    font-weight: bolder;
+    text-align: center;
+}
+
+#musics-list > :nth-child(3n) > :first-child {
+    color: #4df171;
+    cursor: pointer;
+}
+
+#musics-list > :nth-child(3n) > :last-child {
+    color: red;
+    cursor: pointer;
+}
+
+#musics-list > :nth-child(3n+2),
 #music-propositions-list > :nth-child(2n)  {
     text-decoration: none;
     color: #dadada;
