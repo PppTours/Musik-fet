@@ -1,0 +1,8 @@
+# eclipse project files
+bin/
+.settings/
+.classpath
+.project
+
+# runtime files
+music/
