@@ -1,0 +1,13 @@
+{
+  "name": "musik-fet",
+  "version": "1.0.0",
+  "type": "module",
+  "packages": {},
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "audic": "^3.0.1",
+    "express": "^4.18.2"
+  }
+}

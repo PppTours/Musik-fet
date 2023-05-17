@@ -1,0 +1,6 @@
+musics/
+musics-tmp/
+log.txt
+yt-dlp.exe
+node_modules/
+package-lock.json

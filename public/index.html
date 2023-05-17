@@ -1,8 +1,3 @@
-<?php
-
-define("IS_HOST", $_ENV['IS_HOST'] ?? false);
-
-?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -15,21 +10,10 @@ define("IS_HOST", $_ENV['IS_HOST'] ?? false);
 <body>
     <header>
         Musikfet
-        <?php if(IS_HOST): ?>
-        <br>- Host -
-        <?php endif; ?>
-    </header>
+            </header>
 
     <div id="content">
-        <?php if(IS_HOST): ?>
-        <div id="host-controls">
-            <button onclick="alert('todo')">Charger une playlist</button>
-            <button onclick="togglePause()">Mettre en pause</button>
-            <button onclick="shuffleQueue()">Mélanger la file</button><br>
-            <label>Volume<input type="range" min="0" max="100" value="100" oninput="setVolume(this.value/100)"></label>
-        </div>
-        <?php endif; ?>
-        <div id="musics-list">
+                <div id="musics-list">
         </div>
         <div id="no-music-playing-info">
             <span id="no-music-empty-queue">Aucune musique en cours :'(</span>
@@ -56,12 +40,7 @@ define("IS_HOST", $_ENV['IS_HOST'] ?? false);
             <span class="t-delay">+3min</span>
             <a class="t-title" href="youtube.com" target="_blank">Title</a>
             <span>
-                <?php if(IS_HOST): ?>
-                <span class="t-play-now-btn">&gt;</span>
-                &nbsp;
-                <span class="t-remove-btn">X</span>
-                <?php endif; ?>
-            </span>
+                            </span>
         </div>
     </template>
     <template id="music-proposition-template">
